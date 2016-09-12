@@ -1,4 +1,4 @@
-# UCSB Automatic Registeration
+# UCSB Automatic Registration
 ### Automatically register for your courses on GOLD when your pass time comes!
 Just leave this script running and it'll log you in when your pass time comes and register you for your classes.
 You can also view your enrolled courses for a given quarter.
