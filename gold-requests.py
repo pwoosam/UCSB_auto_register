@@ -2,6 +2,7 @@ import requests
 import time
 import datetime
 import getpass
+import re
 from bs4 import BeautifulSoup
 from datetime import datetime as dateTime
 
@@ -19,7 +20,7 @@ def login():
     __EVENTVALIDATION = soup.find(id="__EVENTVALIDATION")['value']
     __VIEWSTATE = soup.find(id="__VIEWSTATE")['value']
     __VIEWSTATEGENERATOR = soup.find(id="__VIEWSTATEGENERATOR")['value']
-    payload = {"ctl00$pageContent$userNameText": input("UCSB NetID?: "),
+    payload = {"ctl00$pageContent$userNameText": input("UCSB NetID: "),
                "ctl00$pageContent$passwordText": getpass.getpass(),
                "ctl00$pageContent$loginButton.x": "108",
                "ctl00$pageContent$loginButton.y": "11",
@@ -69,6 +70,43 @@ def nav_quarter(quarter):
                "__VIEWSTATEGENERATOR": __VIEWSTATEGENERATOR,
                "ctl00$pageContent$quarterDropDown": quarter_code}
     resp = session.post(resp.url, data=payload)
+
+
+def add_courses(enrl_id_list):
+    '''
+    Adds courses to your schedule by enrollment ID.
+    '''
+    global session, resp
+    navigate("My Class Schedule")
+    for enrl_id in enrl_id_list:
+        soup = BeautifulSoup(resp.content, 'html.parser')
+        __VIEWSTATE = soup.find(id="__VIEWSTATE")['value']
+        __VIEWSTATEGENERATOR = soup.find(id="__VIEWSTATEGENERATOR")['value']
+        payload = {"__VIEWSTATE": __VIEWSTATE,
+                   "__VIEWSTATEGENERATOR": __VIEWSTATEGENERATOR,
+                   "ctl00$pageContent$enrollmentCodeTextBox": enrl_id,  # need to verify
+                   "ctl00$pageContent$addButton.x": "",  # need to verify / find
+                   "ctl00$pageContent$addButton.y": ""}  # need to verify / find
+        resp = session.post(resp.url, data=payload)
+
+        soup = BeautifulSoup(resp.content, 'html.parser')
+        __VIEWSTATE = soup.find(id="__VIEWSTATE")['value']
+        __VIEWSTATEGENERATOR = soup.find(id="__VIEWSTATEGENERATOR")['value']
+        payload.clear()
+        payload = {"__VIEWSTATE": __VIEWSTATE,
+                   "__VIEWSTATEGENERATOR": __VIEWSTATEGENERATOR,
+                   "ctl00$pageContent$addToScheduleButton.x": "",  # need to verify / find
+                   "ctl00$pageContent$addToScheduleButton.y": ""}  # need to verify / find
+
+
+def list_courses(quarter):
+    global session, resp
+    navigate("My Class Schedule")
+    nav_quarter(quarter)
+    soup = BeautifulSoup(resp.content, 'html.parser')
+    course_titles = soup.find_all(id=re.compile("^pageContent_CourseList_CourseHeading"))
+    for course in course_titles:
+        print(course.string)
 
 
 def get_pass_times(quarter):
@@ -126,4 +164,4 @@ def pass_timer(formatted_dt):
 
 
 login()
-pass_timer(format_pass_times(get_pass_times("Fall 2016")))
+list_courses(input("Enter quarter and year: "))
