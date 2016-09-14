@@ -1,9 +1,31 @@
+#!/usr/bin/env python3
+#
+# UCSB Auto Registration Copyright (C) 2016, Patrick Woo-Sam
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import requests
 import time
 import getpass
 import re
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
+
+__author__ = "Patrick Woo-Sam"
+__email__ = "pwoosam5@icloud.com"
+__copyright__ = "UCSB Auto Registration Copyright (C) 2016, Patrick Woo-Sam"
+__license__ = "GNU GPL"
 
 
 def login(payload):
@@ -30,11 +52,7 @@ def navigate(page):
     '''
     global session, resp
     pages = {"My Class Schedule": "ctl00$ctl05",
-             "Find Courses": "",
-             "Registration Info": "ctl00$ctl09",
-             "Grades": "",
-             "Academic History": "",
-             "Transcripts/Verification": ""}  # some not yet added
+             "Registration Info": "ctl00$ctl09"}
     soup = BeautifulSoup(resp.content, 'html.parser')
     __VIEWSTATE = soup.find(id="__VIEWSTATE")['value']
     __VIEWSTATEGENERATOR = soup.find(id="__VIEWSTATEGENERATOR")['value']
@@ -44,15 +62,17 @@ def navigate(page):
     resp = session.post(resp.url, data=payload)
 
 
-def nav_quarter(quarter):
+def nav_quarter(quarter=None):
     '''
     Changes quarter from dropdown menu.
     '''
     global session, resp
+    seasons = {"winter": "1", "spring": "2", "summer": "3", "fall": "4"}
+    if quarter is None:
+        quarter = input("Enter quarter and year: ")
     season_year = quarter.split()
+    season = seasons[season_year[0].lower()]
     year = season_year[1]
-    seasons = {"Winter": "1", "Spring": "2", "Summer": "3", "Fall": "4"}
-    season = seasons[season_year[0]]
     quarter_code = year + season
 
     soup = BeautifulSoup(resp.content, 'html.parser')
@@ -63,6 +83,7 @@ def nav_quarter(quarter):
                "__VIEWSTATEGENERATOR": __VIEWSTATEGENERATOR,
                "ctl00$pageContent$quarterDropDown": quarter_code}
     resp = session.post(resp.url, data=payload)
+    return quarter_code
 
 
 def input_enrl_id_list():
@@ -74,21 +95,23 @@ def input_enrl_id_list():
     return enrl_id_list
 
 
-def add_courses(enrl_id_list):
+def add_courses(enrl_id_list, quarter=None):
     '''
     Adds courses to your schedule by enrollment ID.
     '''
     global session, resp
     navigate("My Class Schedule")
+    qtr_code = nav_quarter(quarter)
     for enrl_id in enrl_id_list:
         soup = BeautifulSoup(resp.content, 'html.parser')
         __VIEWSTATE = soup.find(id="__VIEWSTATE")['value']
         __VIEWSTATEGENERATOR = soup.find(id="__VIEWSTATEGENERATOR")['value']
         payload = {"__VIEWSTATE": __VIEWSTATE,
                    "__VIEWSTATEGENERATOR": __VIEWSTATEGENERATOR,
-                   "ctl00$pageContent$enrollmentCodeTextBox": enrl_id,  # need to verify
-                   "ctl00$pageContent$addButton.x": "",  # need to verify / find
-                   "ctl00$pageContent$addButton.y": ""}  # need to verify / find
+                   "ctl00$pageContent$quarterDropDown": qtr_code,
+                   "ctl00$pageContent$EnrollCodeTextBox": enrl_id,
+                   "ctl00$pageContent$addCourseButton.x": "34",
+                   "ctl00$pageContent$addCourseButton.y": "12"}
         resp = session.post(resp.url, data=payload)
 
         soup = BeautifulSoup(resp.content, 'html.parser')
@@ -97,17 +120,18 @@ def add_courses(enrl_id_list):
         payload.clear()
         payload = {"__VIEWSTATE": __VIEWSTATE,
                    "__VIEWSTATEGENERATOR": __VIEWSTATEGENERATOR,
-                   "ctl00$pageContent$addToScheduleButton.x": "",  # need to verify / find
-                   "ctl00$pageContent$addToScheduleButton.y": ""}  # need to verify / find
+                   "ctl00$pageContent$AddToScheduleButton.x": "63",
+                   "ctl00$pageContent$AddToScheduleButton.y": "13"}
+        resp = session.post(resp.url, data=payload)
 
 
-def list_courses(quarter):
+def list_courses():
     '''
     Prints courses for a given quarter.
     '''
     global session, resp
     navigate("My Class Schedule")
-    nav_quarter(quarter)
+    nav_quarter()
     soup = BeautifulSoup(resp.content, 'html.parser')
     course_titles = soup.find_all(id=re.compile("^pageContent_CourseList_\
 CourseHeading"))
@@ -115,7 +139,7 @@ CourseHeading"))
         print(course.string)
 
 
-def get_pass_times(quarter):
+def get_pass_times(quarter=None):
     '''
     Returns a list of unformatted pass times for a given quarter
     '''
@@ -156,18 +180,18 @@ def pass_timer(formatted_dt, countdown=True):
     Loops until you are within one of your pass times
     '''
     passnum = [True, True, True]
-    for i in range(len(formatted_dt)):
-        while passnum[i]:
+    for pass_n, dt, i in zip(passnum, formatted_dt, range(3)):
+        while pass_n:
             current_time = datetime.now()
-            if current_time >= formatted_dt[i][0] and\
-                    current_time < formatted_dt[i][1]:
+            if current_time >= dt[0] and\
+                    current_time < dt[1]:
                 print("It's your pass time!")
                 return 1
-            elif current_time >= formatted_dt[i][1]:
+            elif current_time >= dt[1]:
                 print("Pass {} has passed.".format(i + 1))
-                passnum[i] = False
+                pass_n = False
             else:
-                timediff = formatted_dt[i][0] - current_time
+                timediff = dt[0] - current_time
                 cur_time_str = current_time.strftime("%B %d, %Y %I:%M %p")
                 print("Current date and time: {}".format(cur_time_str))
                 print("Time until Pass {}: {}".format(i + 1, timediff))
@@ -180,14 +204,12 @@ login_payload = {"ctl00$pageContent$userNameText": input("UCSB NetID: "),
                  "ctl00$pageContent$passwordText": getpass.getpass(),
                  "ctl00$pageContent$loginButton.x": "108",
                  "ctl00$pageContent$loginButton.y": "11"}
-
 login(login_payload)
 while True:
     choice = input("Display courses(1), register for courses(2) \
 or exit(<enter>): ")
     if choice == "1":
-        quarter = input("Enter quarter and year: ")
-        list_courses(quarter)
+        list_courses()
     elif choice == "2":
         quarter = input("Enter quarter and year: ")
         enrl_id_list = input_enrl_id_list()
@@ -195,7 +217,9 @@ or exit(<enter>): ")
         formatted_dt = format_pass_times(pass_times)
         pass_timer(formatted_dt, countdown=False)
         login(login_payload)
-        add_courses(enrl_id_list)
-    else:
+        add_courses(enrl_id_list, quarter)
+    elif not choice:
         print("Goodbye")
         break
+    else:
+        print("ERROR: Not a valid choice")
