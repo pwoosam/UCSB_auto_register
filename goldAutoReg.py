@@ -100,7 +100,7 @@ class GOLD_browser():
         self.resp = self.session.post(self.resp.url, data=payload)
         return quarter_code
 
-    def input_enrl_id_list(self):
+    def input_enrl_code_list(self):
         '''
         Asks the user for some course enrollment IDs
         '''
@@ -207,7 +207,7 @@ or exit(<enter>): ")
             br.list_courses()
         elif choice == "2":
             quarter = input("Enter quarter and year: ")
-            br.input_enrl_id_list()
+            br.input_enrl_code_list()
             br.get_pass_times(quarter)
             br.pass_timer(countdown=False)
             br.login()
