@@ -136,6 +136,7 @@ separated by spaces: ")
                        "ctl00$pageContent$AddToScheduleButton.x": "63",
                        "ctl00$pageContent$AddToScheduleButton.y": "13"}
             self.resp = self.session.post(self.resp.url, data=payload)
+            print("Course {} added".format(enrl_code))
 
     def list_courses(self, quarter=None):
         '''
@@ -183,19 +184,17 @@ CourseHeading"))
                 if current_time >= dt[0] and\
                         current_time < dt[1]:
                     print("It's your pass time!")
-                    return 1
+                    return
                 elif current_time >= dt[1]:
                     print("Pass {} has passed.".format(i + 1))
                     pass_n = False
                 else:
                     timediff = dt[0] - current_time
                     cur_time_str = current_time.strftime("%B %d, %Y %I:%M %p")
-                    print("Current date and time: {}".format(cur_time_str))
-                    print("Time until Pass {}: {}".format(i + 1, timediff))
                     if countdown:
-                        time.sleep(0.10)
-                    else:
-                        time.sleep(timediff.total_seconds())
+                        print("Current date and time: {}".format(cur_time_str))
+                        print("Time until Pass {}: {}".format(i + 1, timediff))
+                    time.sleep(0.10)
 
 if __name__ == '__main__':
     br = GOLD_browser()
