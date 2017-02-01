@@ -18,5 +18,6 @@ Open terminal and run: `sudo pip3 install requests bs4`
 
 
 ## Pictures / Use
+*NOTE: I renamed the tool from gold-request.py to goldAutoReg.py*
 ![alt text](http://oi63.tinypic.com/egy0rt.jpg "Display courses")
 ![alt text](http://oi63.tinypic.com/33nj5w5.jpg "Waiting to register")
